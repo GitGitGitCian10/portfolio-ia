@@ -3,7 +3,7 @@ title: "Entrada 01 — EDA Titanic"
 date: 2025-09-21
 ---
 
-# Entrada 01 — EDA-Titanic
+# Entrada 01 — EDA Titanic
 
 ## Contexto
 En esta actividad incial nos familiarizaremos con Kaggle para acceder al
