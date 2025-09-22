@@ -237,7 +237,7 @@ eliminados del análisis.
 
 Viendo que la edad no tiene mucha relevancia en la chance de
 supervivencia excepto en valores atípicos se podría imputar con
-el promedio del sexo correspondiente.
+la mediana del sexo correspondiente.
 
 Dado que las filas con la columna cabin nula constituyen alrededor
 del 75% del dataset, se podría investigar más en profundidad el
