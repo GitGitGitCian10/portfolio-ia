@@ -218,4 +218,5 @@ Finalmente, considero que fue una buena progresión pasar del análisis del data
 del Titanic a un modelo simple prediciendo la supervivencia de los pasajeros.
 
 ## Referencias
+
 - [Mastering Logistic Regression with Scikit-Learn: A Complete Guide](https://www.digitalocean.com/community/tutorials/logistic-regression-with-scikit-learn)

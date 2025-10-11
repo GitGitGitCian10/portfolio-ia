@@ -53,15 +53,15 @@ primera, segunda o tercera clase (1, 2, 3)
 - Embarked: Puerto de embarcación, siendo C = Cherbourg, Q = Queenstown
 y S = Southampton
 
-##### Notas:
-- Pclass sirve como alternativa al estado socioeconómico:
-1 = clase alta, 2 = clase media, 3 = clase baja.
-- Edad si es menor a 1, es fraccional. Si es estimada se
-encuentra en al forma se añade .5 al final.
-- SibSp suma la cantidad de hermanos (hermano, hermana,
-hermanastro, hermanastra) y cónyuges (esposo, esposa).
-- Parch suma la cantidad de padres (padre, madre) e hijos
-(hijo, hija, hijastro, hijastra).
+!!! note "Nota"
+    - Pclass sirve como alternativa al estado socioeconómico:
+    1 = clase alta, 2 = clase media, 3 = clase baja.
+    - Edad si es menor a 1, es fraccional. Si es estimada, se
+    añade .5 al final.
+    - SibSp suma la cantidad de hermanos (hermano, hermana,
+    hermanastro, hermanastra) y cónyuges (esposo, esposa).
+    - Parch suma la cantidad de padres (padre, madre) e hijos
+    (hijo, hija, hijastro, hijastra).
 
 #### Factores más influyentes
 En primera instancia, factores como el sexo y edad seguro
