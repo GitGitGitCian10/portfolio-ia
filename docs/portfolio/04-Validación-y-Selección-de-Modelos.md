@@ -1,6 +1,6 @@
 ---
 title: "Entrada 04 — Validación y Selección de Modelos"
-date: 2025-10-11
+date: 2025-10-12
 ---
 
 # Entrada 04 — Validación y Selección de Modelos
@@ -407,6 +407,8 @@ final_scores = cross_val_score(final_model, X_features, y_target, cv=5)
 print(f"\nModelo final optimizado: {final_scores.mean():.4f} ± {final_scores.std():.4f}")
 ```
 
+![](../assets/04-05.png)
+
 ### 6. Explicabilidad del modelo
 
 ```python linenums="1"
@@ -617,27 +619,45 @@ final_pred_name = outcome_mapping[final_pred] if isinstance(final_pred, int) els
 print(f"Predicción final (voto mayoritario): {final_pred_name}")
 ```
 
+![](../assets/04-06.png)
+
+![](../assets/04-07.png)
+
+![](../assets/04-08.png)
+
+![](../assets/04-09.png)
+
+
 ### Preguntas posteriores
 
-- Qué es data leakage y por qué es peligroso?
+- ¿Qué es data leakage y por qué es peligroso?
 
-💡 PISTA: Piensa en qué información "ve" el modelo antes de tiempo
+Data leakage se produce cuando el modelo accede a información de la variable objetivo o a información del
+set de validación en el entrenamiento, esto resulta en el modelo mostrando un rendimiento muy alto
+en el entrenamiento y validación, pero uno muy pobre cuando se lleva a un ambiente real.
 
 - ¿Cuándo usar KFold vs StratifiedKFold?
 
-💡 PISTA: ¿Qué pasa si una clase tiene muy pocas muestras?
+Se utiliza KFold cuando las clases en la variable objetivo están balanceadas, mientras que es preferible usar StratifiedKFold cuando las clases no están balanceadas, ya que intentará
+mantener la proporción del dataset original.
 
 - ¿Cómo interpretar "95.2% ± 2.1%" en cross-validation?
 
-💡 PISTA: ¿Qué significa cada número para el rendimiento del modelo?
+95.2% en la validación cruzada significa que, el modelo a través de todos los pliegues, logró un rendimiento
+promedio de 95.2% en la métrica utilizada; mientras que el 2.1% indica la desviación estándar, que determina
+la estabilidad e indica qué tanto variaron los resultados del promedio a través de todos los pliegues.
 
 - ¿Por qué Random Forest no necesita StandardScaler?
 
-💡 PISTA: 🔗 Cómo funcionan los árboles de decisión
+Random Forest no necesita StandardScaler ya que este se basa en comparaciones y no toma en cuenta la magnitud
+de los valores, para el Random Forest es igual la comparación 'edad > 18' que 'edad > 0.22' (suponiendo que 18 se
+vuelve 0.18 luego de la estandarización), y es por eso que no requiere StandardScaler.
 
 - En diagnóstico médico, ¿prefieres un modelo con 98% accuracy pero inestable, o 95% accuracy pero muy estable?
 
-💡 PISTA: 🩺 ¿Qué es más importante: máximo rendimiento o confiabilidad?
+Teniendo en cuenta un contexto médico, donde errores grandes pueden costar la vida de un paciente, es prefereible
+un modelo con ligeramente menor accuracy pero, a su vez, mucha menor varianza. En este sentido, es mejor unos
+cuantos diagnosticos ligeramente inexactos que unos pares de diagnosticos completamente erróneos.
 
 #### ¿Qué significan las métricas de validación?
 - Cross-Validation: Técnica que divide los datos en K partes para entrenar y evaluar múltiples veces.
@@ -662,6 +682,12 @@ print(f"Predicción final (voto mayoritario): {final_pred_name}")
 - [Link al Colab](https://colab.research.google.com/drive/1CUSprz-0sMtYtH-Rjuq2ve7nYMmepkRc?usp=sharing)
 
 ## Reflexión
+Conidero que la validación cruzada pasará a ser bastante importante cuando no solo precisemos
+modelos con buen rendimiento sino que también sean estables y consistentes en sus resultados.
+Un próximo paso previsible sería utilizar validación cruzada junto con train_test_split,
+utilizando los datos de entrenamiento para la validación cruzada y teniendo los últimos
+datos de test para una prueba final.
 
-
-- Qué aprendiste, qué mejorarías, próximos pasos
+Algo importante a tener en cuenta es la existencia del data leakage y tenerlo en cuenta a la
+hora de entrenar modelos para que estos puedan funcionar correctamente. Otro punto de interés
+sería maneras de eivtarlo además del uso de pipelines.

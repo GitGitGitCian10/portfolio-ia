@@ -14,3 +14,4 @@ Bienvenido a las entradas del portafolio. Usá la plantilla para crear nuevas p�
 - Tercera entrada: [UT1 - Práctica 3: Regresión Logística y Lineal](03-Regresión-Logística-y-Lineal.md)
 - Cuarta entrada: [UT1 - Práctica 4: Validación y Selección de Modelos](04-Validación-y-Selección-de-Modelos.md)
 - Quinta entrada: [UT1 - Práctica 5: Clustering y PCA](05-Clustering-y-PCA.md)
+- Sexta entrada: [UT2 - Práctica 6: De Perceptrón a Redes Neuronales](06-De-Perceptrón-a-Redes-Neuronales.md)
