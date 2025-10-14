@@ -1,6 +1,6 @@
 ---
 title: "Entrada 05 — Clustering y PCA"
-date: 2025-10-10
+date: 2025-10-13
 ---
 
 # Entrada 05 — Clustering y PCA
@@ -529,28 +529,724 @@ print(f"Listo para PCA y Feature Selection")
 ![](../assets/05-18.png)
 
 Breve análisis:
+
 - Mejor scaler según silhouette: MinMax
 - ¿Por qué crees que funcionó mejor? Debido a la poca cantidad de outliers presentes, y la manera en que manejo las variables de género puede haber sido superior a la de los otros scalers
 - ¿Algún scaler tuvo problemas obvios? RobustScaler a pesar de resultar de manera similar a StandardScaler, tuvo altas distinciones en el manejo de las variables de género (y relacionado o no a esto), y resulto con el menor Silhouette score
 
 ```python linenums="1"
+from sklearn.decomposition import PCA
 
+# === OPERACIÓN: DIMENSION COLLAPSE ===
+print("PCA: Reduciendo dimensiones sin perder la esencia")
+print("   Objetivo: De 5D → 2D para visualización + análisis de varianza")
+
+# 1. Aplicar PCA completo para análisis de varianza
+pca_full = PCA()
+X_pca_full = pca_full.fit_transform(X_preprocessed)
+
+# 2. ANÁLISIS DE VARIANZA EXPLICADA
+explained_variance_ratio = pca_full.explained_variance_ratio_
+cumulative_variance = np.cumsum(explained_variance_ratio)
+
+print(f"\n📊 ANÁLISIS DE VARIANZA EXPLICADA:")
+for i, (var, cum_var) in enumerate(zip(explained_variance_ratio, cumulative_variance)):
+    print(f"   PC{i+1}: {var:.3f} ({var*100:.1f}%) | Acumulada: {cum_var:.3f} ({cum_var*100:.1f}%)")
+
+# 3. VISUALIZACIÓN DE VARIANZA EXPLICADA
+fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+# Scree plot
+axes[0].bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio,
+           alpha=0.7, color='#FF6B6B')
+axes[0].set_xlabel('Componentes Principales')
+axes[0].set_ylabel('Varianza Explicada')
+axes[0].set_title('📊 Scree Plot - Varianza por Componente')
+axes[0].set_xticks(range(1, len(explained_variance_ratio) + 1))
+
+# Cumulative variance
+axes[1].plot(range(1, len(cumulative_variance) + 1), cumulative_variance,
+            marker='o', linewidth=2, markersize=8, color='#4ECDC4')
+axes[1].axhline(y=0.95, color='red', linestyle='--', alpha=0.7, label='95% threshold')
+axes[1].axhline(y=0.90, color='orange', linestyle='--', alpha=0.7, label='90% threshold')
+axes[1].set_xlabel('Número de Componentes')
+axes[1].set_ylabel('Varianza Acumulada')
+axes[1].set_title('📈 Varianza Acumulada')
+axes[1].legend()
+axes[1].grid(True, alpha=0.3)
+axes[1].set_xticks(range(1, len(cumulative_variance) + 1))
+
+plt.tight_layout()
+plt.show()
+
+# 4. DECISIÓN SOBRE NÚMERO DE COMPONENTES
+print(f"\n🎯 DECISIÓN DE COMPONENTES:")
+n_components_90 = np.argmax(cumulative_variance >= 0.90) + 1
+n_components_95 = np.argmax(cumulative_variance >= 0.95) + 1
+
+print(f"   📊 Para retener 90% varianza: {n_components_90} componentes")
+print(f"   📊 Para retener 95% varianza: {n_components_95} componentes")
+print(f"   🎯 Para visualización: 2 componentes ({cumulative_variance[1]*100:.1f}% varianza)")
+
+# 5. APLICAR PCA CON 2 COMPONENTES PARA VISUALIZACIÓN
+pca_2d = PCA(n_components=2, random_state=42)
+X_pca_2d = pca_2d.fit_transform(X_preprocessed)
+
+print(f"\nPCA aplicado:")
+print(f"   📊 Dimensiones: {X_preprocessed.shape} → {X_pca_2d.shape}")
+print(f"   📈 Varianza explicada: {pca_2d.explained_variance_ratio_.sum()*100:.1f}%")
+
+# 6. ANÁLISIS DE COMPONENTES PRINCIPALES
+print(f"\n🔍 INTERPRETACIÓN DE COMPONENTES:")
+feature_names = ['Age', 'Annual Income (k$)', 'Spending Score (1-100)', 'Genre_Female', 'Genre_Male']
+
+for i, pc in enumerate(['PC1', 'PC2']):
+    print(f"\n   {pc} (varianza: {pca_2d.explained_variance_ratio_[i]*100:.1f}%):")
+    # Obtener los loadings (pesos de cada feature original en el componente)
+    loadings = pca_2d.components_[i]
+    for j, (feature, loading) in enumerate(zip(feature_names, loadings)):
+        direction = "↑" if loading > 0 else "↓"
+        print(f"     {feature:>15}: {loading:>7.3f} {direction}")
+
+# 7. VISUALIZACIÓN EN 2D
+plt.figure(figsize=(12, 8))
+plt.scatter(X_pca_2d[:, 0], X_pca_2d[:, 1], alpha=0.6, s=50, color='#96CEB4')
+plt.xlabel(f'PC1 ({pca_2d.explained_variance_ratio_[0]*100:.1f}% varianza)')
+plt.ylabel(f'PC2 ({pca_2d.explained_variance_ratio_[1]*100:.1f}% varianza)')
+plt.title('Mall Customers en Espacio PCA 2D')
+plt.grid(True, alpha=0.3)
+plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+plt.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+plt.tight_layout()
+plt.show()
 ```
 
 ![](../assets/05-19.png)
 
-```python linenums="1"
+![](../assets/05-20.png)
 
+![](../assets/05-21.png)
+
+Interpretación del negocio:
+
+- PC1 parece representar: Diferencia de género
+- PC2 parece representar: Diferencia de edad y spending score
+- Los clusters visibles sugieren: Segmentos separado por género y edad y spending score
+
+
+```python linenums="1"
+# === OPERACIÓN: FEATURE SELECTION SHOWDOWN ===
+print("🎯 FEATURE SELECTION vs PCA: ¿Seleccionar o Transformar?")
+print("   🎯 Objetivo: Comparar Forward/Backward Selection vs PCA")
+
+print(f"\n📊 FEATURE SELECTION: Forward vs Backward vs PCA")
+print(f"   Dataset: {X_preprocessed.shape[0]} muestras, {X_preprocessed.shape[1]} features")
+
+# Setup: Función para evaluar features en clustering
+def evaluate_features_for_clustering(X, n_clusters=4):
+    """Evalúa qué tan buenas son las features para clustering usando Silhouette Score"""
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X)
+    return silhouette_score(X, labels)
+
+# === IMPORTS PARA ESTIMADORES PERSONALIZADOS ===
+from sklearn.base import BaseEstimator, ClassifierMixin  # Clases base necesarias
+
+# CLASE AUXILIAR: Estimador basado en KMeans para SequentialFeatureSelector
+class ClusteringEstimator(BaseEstimator, ClassifierMixin):
+    """Estimador que usa KMeans y Silhouette Score para feature selection"""
+    def __init__(self, n_clusters=4):
+        self.n_clusters = n_clusters
+
+    def fit(self, X, y=None):
+        self.kmeans_ = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
+        self.labels_ = self.kmeans_.fit_predict(X)
+        return self
+
+    def score(self, X, y=None):
+        # SequentialFeatureSelector llama a score() para evaluar features
+        kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
+        labels = kmeans.fit_predict(X)
+        return silhouette_score(X, labels)
+
+    def predict(self, X):
+        # Método requerido por ClassifierMixin
+        if hasattr(self, 'kmeans_'):
+            return self.kmeans_.predict(X)
+        else:
+            # Si no está entrenado, entrenar primero
+            kmeans = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
+            return kmeans.fit_predict(X)
+
+print("✅ Setup completado - Funciones de evaluación listas")
 ```
 
-![](../assets/05-15.png)
+```python linenums="1"
+# BASELINE: Todas las features
+baseline_score = evaluate_features_for_clustering(X_preprocessed)
+print(f"\n📊 BASELINE (todas las features): Silhouette = {baseline_score:.3f}")
+print(f"   Este es el score con las {X_preprocessed.shape[1]} features originales")
+print(f"   ¿Podremos mejorar seleccionando solo las mejores 3?")
+```
 
+![](../assets/05-22.png)
+
+```python linenums="1"
+# === FORWARD SELECTION (sklearn oficial) ===
+print(f"\n🔄 FORWARD SELECTION (sklearn oficial):")
+print(f"   Estrategia: Empezar con 0 features, agregar la mejor en cada paso")
+
+forward_selector = SequentialFeatureSelector(
+    estimator=ClusteringEstimator(n_clusters=4),  # Estimador que implementa fit() y score()
+    n_features_to_select=3,
+    direction='forward',  # ¿Qué dirección para Forward?
+    cv=3,
+    n_jobs=-1
+)
+
+forward_selector.fit(X_preprocessed)  # Método para entrenar
+forward_mask = forward_selector.get_support()  # Método para obtener máscara booleana
+X_forward = X_preprocessed[:, forward_mask]
+forward_features = np.array(feature_columns)[forward_mask]
+forward_score = evaluate_features_for_clustering(X_forward)
+
+print(f"   Features seleccionadas: {list(forward_features)}")
+print(f"   📊 Silhouette Score: {forward_score:.3f}")
+print(f"   {'✅ Mejora!' if forward_score > baseline_score else '❌ Sin mejora'}")
+```
+
+```python linenums="1"
+# === FORWARD SELECTION (sklearn oficial) ===
+print(f"\n🔄 FORWARD SELECTION (sklearn oficial):")
+print(f"   Estrategia: Empezar con 0 features, agregar la mejor en cada paso")
+
+forward_selector = SequentialFeatureSelector(
+    estimator=ClusteringEstimator(n_clusters=4),  # Estimador que implementa fit() y score()
+    n_features_to_select=3,
+    direction='forward',  # ¿Qué dirección para Forward?
+    cv=3,
+    n_jobs=-1
+)
+
+forward_selector.fit(X_preprocessed)  # Método para entrenar
+forward_mask = forward_selector.get_support()  # Método para obtener máscara booleana
+X_forward = X_preprocessed[:, forward_mask]
+forward_features = np.array(feature_columns)[forward_mask]
+forward_score = evaluate_features_for_clustering(X_forward)
+
+print(f"   Features seleccionadas: {list(forward_features)}")
+print(f"   📊 Silhouette Score: {forward_score:.3f}")
+print(f"   {'✅ Mejora!' if forward_score > baseline_score else '❌ Sin mejora'}")
+```
+
+![](../assets/05-23.png)
+
+![](../assets/05-24.png)
+
+```python linenums="1"
+# === COMPARACIÓN FINAL DE TODOS LOS MÉTODOS ===
+print(f"\n📊 COMPARACIÓN DE MÉTODOS:")
+print(f"   🏁 Baseline (todas): {baseline_score:.3f}")
+print(f"   🔄 Forward Selection: {forward_score:.3f}")
+print(f"   🔙 Backward Elimination: {backward_score:.3f}")
+
+# Comparar con PCA (ya calculado anteriormente)
+pca_score = evaluate_features_for_clustering(X_pca_2d)
+print(f"   📐 PCA (2D): {pca_score:.3f}")
+
+# Encontrar el mejor método
+methods = {
+    'Baseline (todas)': baseline_score,
+    'Forward Selection': forward_score,
+    'Backward Elimination': backward_score,
+    'PCA (2D)': pca_score
+}
+
+best_method = max(methods, key=methods.get)
+best_score = methods[best_method]
+
+print(f"\n🏆 GANADOR: {best_method} con score = {best_score:.3f}")
+
+# Análisis de diferencias
+print(f"\n🔍 ANÁLISIS:")
+for method, score in sorted(methods.items(), key=lambda x: x[1], reverse=True):
+    improvement = ((score - baseline_score) / baseline_score) * 100
+    print(f"   {method}: {score:.3f} ({improvement:+.1f}% vs baseline)")
+```
+
+![](../assets/05-25.png)
+
+```python linenums="1"
+# === VISUALIZACIÓN DE COMPARACIÓN ===
+methods_names = ['Baseline', 'Forward', 'Backward', 'PCA 2D']
+scores_values = [baseline_score, forward_score, backward_score, pca_score]
+colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+
+plt.figure(figsize=(12, 6))
+bars = plt.bar(methods_names, scores_values, color=colors, alpha=0.7)
+plt.ylabel('Silhouette Score')
+plt.title('Comparación de Métodos de Feature Selection')
+plt.axhline(y=0.5, color='red', linestyle='--', alpha=0.5, label='Threshold Aceptable (0.5)')
+plt.axhline(y=0.7, color='green', linestyle='--', alpha=0.5, label='Threshold Muy Bueno (0.7)')
+plt.legend()
+plt.grid(True, alpha=0.3, axis='y')
+
+# Añadir valores en las barras
+for bar, score in zip(bars, scores_values):
+    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+             f'{score:.3f}', ha='center', va='bottom', fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+```
+
+![](../assets/05-26.png)
+
+```python linenums="1"
+# === ANÁLISIS DE RESULTADOS ===
+print(f"\n🎯 ANÁLISIS DE RESULTADOS:")
+
+# Comparar features seleccionadas
+print(f"\n🔍 FEATURES SELECCIONADAS POR CADA MÉTODO:")
+print(f"   🔄 Forward Selection: {list(forward_features)}")
+print(f"   🔙 Backward Elimination: {list(backward_features)}")
+
+# Análisis de coincidencias
+forward_set = set(forward_features)
+backward_set = set(backward_features)
+
+common_forward_backward = forward_set & backward_set
+
+print(f"\n🤝 COINCIDENCIAS:")
+print(f"   Forward ∩ Backward: {list(common_forward_backward)}")
+print(f"   ¿Seleccionaron las mismas features? {'Sí' if forward_set == backward_set else 'No'}")
+```
+
+![](../assets/05-27.png)
+
+Preguntas de análisis:
+
+- Método con mejor score: PCA
+- ¿Forward y Backward seleccionaron exactamente las mismas features? Sí
+- ¿PCA con 2 componentes es competitivo? Sí, superando tanto la baseline como a forward y backward selection
+- ¿Algún método superó el threshold de 0.5? PCA, forward y backward
+- ¿La reducción de dimensionalidad mejoró el clustering? Sí
+
+```python linenums="1"
+# === DECISIÓN PARA EL ANÁLISIS FINAL ===
+print(f"\n🏢 DECISIÓN PARA EL ANÁLISIS:")
+
+# Decidir método basado en resultados
+if best_score == pca_score:
+    selected_method = "PCA"
+    selected_data = X_pca_2d
+    print(f"   🎯 SELECCIONADO: PCA (2D) - Score: {pca_score:.3f}")
+    print(f"   ✅ RAZÓN: Mejor balance entre reducción dimensional y performance")
+elif best_score == forward_score:
+    selected_method = "Forward Selection"
+    selected_data = X_forward
+    print(f"   🎯 SELECCIONADO: Forward Selection - Score: {forward_score:.3f}")
+    print(f"   ✅ RAZÓN: Mejor score con features interpretables")
+elif best_score == backward_score:
+    selected_method = "Backward Elimination"
+    selected_data = X_backward
+    print(f"   🎯 SELECCIONADO: Backward Elimination - Score: {backward_score:.3f}")
+    print(f"   ✅ RAZÓN: Mejor score eliminando features redundantes")
+else:
+    # Fallback to baseline if needed
+    selected_method = "Baseline (todas las features)"
+    selected_data = X_preprocessed
+    print(f"   🎯 SELECCIONADO: Baseline - Score: {baseline_score:.3f}")
+    print(f"   ✅ RAZÓN: Ningún método de reducción mejoró el clustering")
+
+# Guardar para clustering final
+X_final_for_clustering = selected_data
+final_method_name = selected_method
+
+print(f"\n📊 PREPARADO PARA CLUSTERING:")
+print(f"   Método: {final_method_name}")
+print(f"   Dimensiones: {X_final_for_clustering.shape}")
+print(f"   Silhouette Score: {best_score:.3f}")
+```
+
+![](../assets/05-28.png)
 
 ### 4. Modelado y clustering
 
+```python linenums="1"
+# === OPERACIÓN: CUSTOMER SEGMENTATION DISCOVERY ===
+print("K-MEANS CLUSTERING: Descubriendo segmentos de clientes")
+print(f"   Dataset: {X_final_for_clustering.shape} usando método '{final_method_name}'")
 
+# 1. BÚSQUEDA DEL K ÓPTIMO - Elbow Method + Silhouette
+print(f"\n📈 BÚSQUEDA DEL K ÓPTIMO:")
+
+k_range = range(2, 9)
+inertias = []
+silhouette_scores = []
+
+for k in k_range:
+    # Aplicar K-Means
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(X_final_for_clustering)
+
+    # Calcular métricas
+    inertias.append(kmeans.inertia_)
+    sil_score = silhouette_score(X_final_for_clustering, labels)
+    silhouette_scores.append(sil_score)
+
+    print(f"   K={k}: Inertia={kmeans.inertia_:.2f}, Silhouette={sil_score:.3f}")
+
+# 2. VISUALIZACIÓN ELBOW METHOD + SILHOUETTE
+fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+# Elbow Method
+axes[0].plot(k_range, inertias, marker='o', linewidth=2, markersize=8, color='#FF6B6B')
+axes[0].set_xlabel('Número de Clusters (K)')
+axes[0].set_ylabel('Inertia (WCSS)')
+axes[0].set_title('📈 Elbow Method')
+axes[0].grid(True, alpha=0.3)
+axes[0].set_xticks(k_range)
+
+# Silhouette Scores
+axes[1].plot(k_range, silhouette_scores, marker='s', linewidth=2, markersize=8, color='#4ECDC4')
+axes[1].axhline(y=0.5, color='orange', linestyle='--', alpha=0.7, label='Aceptable (0.5)')
+axes[1].axhline(y=0.7, color='green', linestyle='--', alpha=0.7, label='Muy Bueno (0.7)')
+axes[1].set_xlabel('Número de Clusters (K)')
+axes[1].set_ylabel('Silhouette Score')
+axes[1].set_title('📊 Silhouette Analysis')
+axes[1].legend()
+axes[1].grid(True, alpha=0.3)
+axes[1].set_xticks(k_range)
+
+plt.tight_layout()
+plt.show()
+
+# 3. ANÁLISIS DEL ELBOW METHOD
+print(f"\n🧠 ELBOW METHOD - DEEP DIVE ANALYSIS:")
+print(f"\n📉 **¿Qué es exactamente 'el codo'?**")
+print(f"   - **Matemáticamente:** Punto donde la segunda derivada de WCSS vs K cambia más dramáticamente")
+print(f"   - **Visualmente:** Donde la curva pasa de 'caída empinada' a 'caída suave'")
+print(f"   - **Conceptualmente:** Balance entre simplicidad (menos clusters) y precisión (menor error)")
+
+# Calcular diferencias para encontrar el codo
+differences = np.diff(inertias)
+second_differences = np.diff(differences)
+elbow_candidate = k_range[np.argmin(second_differences) + 2]  # +2 por los dos diff()
+
+print(f"\n📊 **Análisis cuantitativo del codo:**")
+for i, k in enumerate(k_range[:-2]):
+    print(f"   K={k}: Δ Inertia={differences[i]:.2f}, Δ²={second_differences[i]:.2f}")
+
+print(f"\n🎯 **Candidato por Elbow Method:** K={elbow_candidate}")
+
+# 4. DECISIÓN FINAL DE K
+best_k_silhouette = k_range[np.argmax(silhouette_scores)]
+print(f"🎯 **Candidato por Silhouette:** K={best_k_silhouette} (score={max(silhouette_scores):.3f})")
+
+print(f"\n🤝 **DECISIÓN FINAL:**")
+if elbow_candidate == best_k_silhouette:
+    optimal_k = elbow_candidate
+    print(f"   Ambos métodos coinciden: K = {optimal_k}")
+else:
+    print(f"   ⚖️  Elbow sugiere K={elbow_candidate}, Silhouette sugiere K={best_k_silhouette}")
+    print(f"   💼 Considerando el contexto de negocio (3-5 segmentos esperados)...")
+    # Elegir basado en contexto de negocio y calidad
+    if 3 <= best_k_silhouette <= 5 and max(silhouette_scores) > 0.4:
+        optimal_k = best_k_silhouette
+        print(f"   Elegimos K = {optimal_k} (mejor silhouette + contexto negocio)")
+    else:
+        optimal_k = elbow_candidate if 3 <= elbow_candidate <= 5 else 4
+        print(f"   Elegimos K = {optimal_k} (balance elbow + contexto negocio)")
+
+# 5. MODELO FINAL CON K ÓPTIMO
+print(f"\n🎯 ENTRENANDO MODELO FINAL CON K={optimal_k}")
+
+final_kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=20)
+final_labels = final_kmeans.fit_predict(X_final_for_clustering)
+final_silhouette = silhouette_score(X_final_for_clustering, final_labels)
+
+print(f"Modelo entrenado:")
+print(f"   📊 Silhouette Score: {final_silhouette:.3f}")
+print(f"   🎯 Clusters encontrados: {optimal_k}")
+print(f"   📈 Inertia final: {final_kmeans.inertia_:.2f}")
+
+# 6. DISTRIBUCIÓN DE CLIENTES POR CLUSTER
+cluster_counts = pd.Series(final_labels).value_counts().sort_index()
+print(f"\n👥 DISTRIBUCIÓN DE CLIENTES:")
+for cluster_id, count in cluster_counts.items():
+    percentage = (count / len(final_labels)) * 100
+    print(f"   Cluster {cluster_id}: {count:,} clientes ({percentage:.1f}%)")
+
+# 7. AGREGAR CLUSTERS AL DATAFRAME ORIGINAL
+df_customers['cluster'] = final_labels
+df_customers['cluster_name'] = df_customers['cluster'].map({
+    i: f"Cluster_{i}" for i in range(optimal_k)
+})
+
+print(f"\nClusters asignados al dataset original")
+```
+
+![](../assets/05-29.png)
+
+![](../assets/05-30.png)
+
+![](../assets/05-31.png)
 
 ### 5. Evaluación y resumen
+
+```python linenums="1"
+# === OPERACIÓN: INTELLIGENCE REPORT ===
+print("ANALISIS DE SEGMENTOS DE CLIENTES - REPORTE EJECUTIVO")
+
+# 1. PERFILES DE CLUSTERS
+print(f"\nPERFILES DETALLADOS POR CLUSTER:")
+
+for cluster_id in sorted(df_customers['cluster'].unique()):
+    cluster_data = df_customers[df_customers['cluster'] == cluster_id]
+    cluster_size = len(cluster_data)
+
+    print(f"\n**CLUSTER {cluster_id}** ({cluster_size} clientes, {cluster_size/len(df_customers)*100:.1f}%)")
+
+    # Estadísticas usando las columnas CORRECTAS del Mall Customer Dataset
+    avg_age = cluster_data['Age'].mean()
+    avg_income = cluster_data['Annual Income (k$)'].mean()
+    avg_spending = cluster_data['Spending Score (1-100)'].mean()
+
+    # Distribución por género
+    genre_counts = cluster_data['Genre'].value_counts()
+
+    print(f"   **Perfil Demográfico:**")
+    print(f"      Edad promedio: {avg_age:.1f} años")
+    print(f"      Distribución género: {dict(genre_counts)}")
+
+    print(f"   **Perfil Financiero:**")
+    print(f"      Ingreso anual: ${avg_income:.1f}k")
+    print(f"      Spending Score: {avg_spending:.1f}/100")
+
+    # Comparar con ground truth si está disponible
+    if 'true_segment' in df_customers.columns:
+        true_segments_in_cluster = cluster_data['true_segment'].value_counts()
+        dominant_segment = true_segments_in_cluster.index[0]
+        purity = true_segments_in_cluster.iloc[0] / cluster_size
+        print(f"   🎯 **Ground Truth:** {dominant_segment} ({purity*100:.1f}% purity)")
+
+# 2. MATRIZ DE CONFUSIÓN CON GROUND TRUTH
+if 'true_segment' in df_customers.columns:
+    print(f"\n🎯 VALIDACIÓN CON GROUND TRUTH:")
+    confusion_matrix = pd.crosstab(df_customers['true_segment'], df_customers['cluster'],
+                                  margins=True, margins_name="Total")
+    print(confusion_matrix)
+
+    # Calcular pureza de clusters
+    cluster_purities = []
+    for cluster_id in sorted(df_customers['cluster'].unique()):
+        cluster_data = df_customers[df_customers['cluster'] == cluster_id]
+        dominant_true_segment = cluster_data['true_segment'].mode().iloc[0]
+        purity = (cluster_data['true_segment'] == dominant_true_segment).mean()
+        cluster_purities.append(purity)
+
+    average_purity = np.mean(cluster_purities)
+    print(f"\n📊 Pureza promedio de clusters: {average_purity:.3f}")
+
+# 3. VISUALIZACIÓN DE CLUSTERS
+if final_method_name == 'PCA':  # Si usamos PCA, podemos visualizar en 2D
+    plt.figure(figsize=(15, 10))
+
+    # Subplot 1: Clusters encontrados
+    plt.subplot(2, 2, 1)
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
+    for cluster_id in sorted(df_customers['cluster'].unique()):
+        cluster_mask = final_labels == cluster_id
+        plt.scatter(X_pca_2d[cluster_mask, 0], X_pca_2d[cluster_mask, 1],
+                   c=colors[cluster_id % len(colors)], label=f'Cluster {cluster_id}',
+                   alpha=0.7, s=50)
+
+    # Plotear centroides
+    if final_method_name == 'PCA':
+        centroids_pca = final_kmeans.cluster_centers_
+        plt.scatter(centroids_pca[:, 0], centroids_pca[:, 1],
+                   c='red', marker='X', s=200, linewidths=3, label='Centroides')
+
+    plt.xlabel('PC1')
+    plt.ylabel('PC2')
+    plt.title('Clusters Descubiertos (PCA 2D)')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Subplot 2: Ground truth (si disponible)
+    if 'true_segment' in df_customers.columns:
+        plt.subplot(2, 2, 2)
+        true_segment_colors = {'VIP': '#FF6B6B', 'Regular': '#4ECDC4',
+                              'Occasional': '#45B7D1', 'At_Risk': '#96CEB4'}
+        for segment, color in true_segment_colors.items():
+            segment_mask = df_customers['true_segment'] == segment
+            segment_indices = df_customers[segment_mask].index
+            plt.scatter(X_pca_2d[segment_indices, 0], X_pca_2d[segment_indices, 1],
+                       c=color, label=segment, alpha=0.7, s=50)
+
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        plt.title('Ground Truth Segments')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+    # Subplot 3: Feature distribution by cluster
+    plt.subplot(2, 2, 3)
+    # Usar las columnas correctas del Mall Customer Dataset
+    cluster_means = df_customers.groupby('cluster')[['Age', 'Annual Income (k$)', 'Spending Score (1-100)']].mean()
+    cluster_means.plot(kind='bar', ax=plt.gca(), color=['#FF6B6B', '#4ECDC4', '#45B7D1'])
+    plt.title('Perfil Promedio por Cluster')
+    plt.ylabel('Valor Promedio')
+    plt.legend(title='Características', bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.xticks(rotation=0)
+
+    # Subplot 4: Cluster sizes
+    plt.subplot(2, 2, 4)
+    cluster_sizes = df_customers['cluster'].value_counts().sort_index()
+    colors_subset = [colors[i] for i in cluster_sizes.index]
+    bars = plt.bar(cluster_sizes.index, cluster_sizes.values, color=colors_subset, alpha=0.7)
+    plt.xlabel('Cluster ID')
+    plt.ylabel('Número de Clientes')
+    plt.title('Distribución de Clientes por Cluster')
+
+    # Añadir etiquetas en las barras
+    for bar, size in zip(bars, cluster_sizes.values):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 10,
+                f'{size}\n({size/len(df_customers)*100:.1f}%)',
+                ha='center', va='bottom')
+
+plt.tight_layout()
+plt.show()
+```
+
+![](../assets/05-32.png)
+
+![](../assets/05-33.png)
+
+```python linenums="1"
+# === ANÁLISIS SILHOUETTE POR CLUSTER ===
+print(f"\n📊 ANÁLISIS SILHOUETTE DETALLADO:")
+
+from sklearn.metrics import silhouette_samples  # Función para silhouette por muestra individual
+
+# Calcular silhouette score por muestra
+sample_silhouette_values = silhouette_samples(X_final_for_clustering, final_labels)
+
+# Estadísticas por cluster
+print(f"   🎯 Silhouette Score General: {final_silhouette:.3f}")
+for cluster_id in sorted(df_customers['cluster'].unique()):
+    cluster_silhouette_values = sample_silhouette_values[final_labels == cluster_id]
+    cluster_avg_silhouette = cluster_silhouette_values.mean()
+    cluster_min_silhouette = cluster_silhouette_values.min()
+
+    print(f"   Cluster {cluster_id}: μ={cluster_avg_silhouette:.3f}, "
+          f"min={cluster_min_silhouette:.3f}, "
+          f"samples={len(cluster_silhouette_values)}")
+```
+
+![](../assets/05-34.png)
+
+```python linenums="1"
+# === DETECCIÓN DE OUTLIERS EN CLUSTERING ===
+print(f"\n🚨 DETECCIÓN DE OUTLIERS EN CLUSTERING:")
+outlier_threshold = 0.0  # Silhouette negativo = mal asignado
+
+for cluster_id in sorted(df_customers['cluster'].unique()):
+    cluster_mask = final_labels == cluster_id
+    cluster_silhouette = sample_silhouette_values[cluster_mask]
+    outliers = np.sum(cluster_silhouette < outlier_threshold)
+
+    if outliers > 0:
+        print(f"   ⚠️  Cluster {cluster_id}: {outliers} posibles outliers (silhouette < 0)")
+    else:
+        print(f"   ✅ Cluster {cluster_id}: Sin outliers detectados")
+```
+
+![](../assets/05-35.png)
+
+```python linenums="1"
+# === ANÁLISIS DE PERFILES POR CLUSTER ===
+print(f"\nANALISIS DE SEGMENTOS DE CLIENTES - REPORTE EJECUTIVO")
+print(f"\nPERFILES DETALLADOS POR CLUSTER:")
+
+# Análisis por cluster usando las columnas REALES del dataset
+for cluster_id in sorted(df_customers['cluster'].unique()):
+    cluster_data = df_customers[df_customers['cluster'] == cluster_id]
+    cluster_size = len(cluster_data)
+    cluster_pct = (cluster_size / len(df_customers)) * 100
+
+    # Estadísticas usando las columnas CORRECTAS del Mall Customer Dataset
+    avg_age = cluster_data['Age'].mean()
+    avg_income = cluster_data['Annual Income (k$)'].mean()
+    avg_spending = cluster_data['Spending Score (1-100)'].mean()
+
+    # Distribución por género
+    genre_counts = cluster_data['Genre'].value_counts()
+
+    print(f"\n🏷️  **CLUSTER {cluster_id}** ({cluster_size} clientes, {cluster_pct:.1f}%)")
+    print(f"   📊 **Perfil Demográfico:**")
+    print(f"      👤 Edad promedio: {avg_age:.1f} años")
+    print(f"      👥 Distribución género: {dict(genre_counts)}")
+
+    print(f"   💰 **Perfil Financiero:**")
+    print(f"      💵 Ingreso anual: ${avg_income:.1f}k")
+    print(f"      🛍️  Spending Score: {avg_spending:.1f}/100")
+```
+
+![](../assets/05-36.png)
+
+### Preguntas posteriores
+
+- ¿Qué fase fue más desafiante y por qué? _
+
+
+
+- ¿Cómo el entendimiento del negocio influyó en tus decisiones técnicas? _
+
+Al no llegar a un acuerdo del K óptimo con el Elbow Method y Silhouette, se tomó una
+decisión en base a la solicitud del negocio de manter los segmentos entre 3 y 5, y no
+usó simplemente el Elbow Method o el Silhouette sino un promedio de los dos, cuyo 
+resultado entraba en el rango anterior.
+
+- ¿Qué scaler funcionó mejor y por qué? _
+
+
+
+- ¿PCA o Feature Selection fue más efectivo para tu caso? _
+
+En este caso, PCA fue más efectivo que ambos Feature Selection con un márgen de
++0.113 en base al Silhouette Score.
+
+- ¿Cómo balanceaste interpretabilidad vs performance? _
+
+
+
+- ¿El Elbow Method y Silhouette coincidieron en el K óptimo?
+
+No, el Elbow Method proponía un número de mayor de clusters, mientras que en base
+al Silhouette Score se proponía sólo un par. Tomando en cuenta el contexto de negocio,
+se llegó al resultado intermedio de 4 clusters.
+
+- ¿Los clusters encontrados coinciden con la intuición de negocio? _
+
+
+
+- ¿Qué harías diferente si fueras a repetir el análisis? _
+
+
+
+- ¿Cómo presentarías estos resultados en un contexto empresarial? _
+
+
+
+- ¿Qué valor aportan estas segmentaciones? _
+
+
+
+- ¿Qué limitaciones tiene este análisis? _
+
+
 
 ## Evidencias
 - [Link al Colab](https://colab.research.google.com/drive/1CF5oHvPmK4o1lfW5oue_HXQhEuPSry79?usp=sharing)
