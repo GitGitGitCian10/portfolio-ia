@@ -15,3 +15,5 @@ Bienvenido a las entradas del portafolio. Usá la plantilla para crear nuevas p�
 - Cuarta entrada: [UT1 - Práctica 4: Validación y Selección de Modelos](04-Validación-y-Selección-de-Modelos.md)
 - Quinta entrada: [UT1 - Práctica 5: Clustering y PCA](05-Clustering-y-PCA.md)
 - Sexta entrada: [UT2 - Práctica 6: De Perceptrón a Redes Neuronales](06-De-Perceptrón-a-Redes-Neuronales.md)
+- Septima entrada: [UT2 - Práctica 7:](07-Backpropagation-y-Optimizadores.md)
+- Ocatava entrada: [UT3 - Práctica 8:](08-CCNs-y-Transfer-Learning.md)

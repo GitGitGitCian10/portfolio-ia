@@ -441,7 +441,7 @@ def comparar_superficies_decision(mlp_xor):
 comparar_superficies_decision(mlp_xor)
 ```
 
-![](../assets/06-07)
+![](../assets/06-07.png)
 
 Como podemos ver, la red MLP triunfa en donde el perceptrón falló, las redes MLP son
 capaces de crear superficies más flexibles en formas que permiten resolver problemas
