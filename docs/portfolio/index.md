@@ -9,6 +9,11 @@ Bienvenido a las entradas del portafolio. Usá la plantilla para crear nuevas p�
 (`01-...`, `02-...`).
 
 - Plantilla: [plantilla.md](plantilla.md)
+### General:
+
+#### Extra:
+- O01: [Visualizando lo escondido: Entendiendo lo que se encuentra detrás del código](O01.md)
+
 ### UT1:
 
 - 01: [Titanic: Exploración de datos y descubrimiento de patrones de supervivencia](01.md)
@@ -35,4 +40,3 @@ Bienvenido a las entradas del portafolio. Usá la plantilla para crear nuevas p�
 - 14: [IA con agencia: Diseño de sistemas autónomos capaces de razonar y usar herramientas](14.md)
 ### UT5:
 - 15: [Escalabilidad y producción: Implementación de soluciones de IA generativa en Google Cloud](15.md)
-- 16: [Prompt engineering en la nube: Dominando la generación de contenido con Vertex AI](16.md)
