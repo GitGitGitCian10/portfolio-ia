@@ -40,3 +40,4 @@ Bienvenido a las entradas del portafolio. Usá la plantilla para crear nuevas p�
 - 14: [IA con agencia: Diseño de sistemas autónomos capaces de razonar y usar herramientas](14.md)
 ### UT5:
 - 15: [Escalabilidad y producción: Implementación de soluciones de IA generativa en Google Cloud](15.md)
+- 16: [Ingeniería de Prompts en la Nube: Dominando la generación de contenido con Vertex AI](16.md)
